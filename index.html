@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HACK INTO TERMINAL</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #2a2a2a;
+    color: #fff;
+    font-family: monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .wrapper {
+    width: 100%;
+    max-width: 860px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* ── Terminal top bar (outside the box) ── */
+  .terminal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 6px;
+  }
+
+  .terminal-title {
+    font-size: 45px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #fff;
+  }
+
+  .lives {
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .life-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff;
+    display: inline-block;
+    transition: background 0.15s, opacity 0.15s;
+  }
+
+  .life-dot.used {
+    background: transparent;
+    border: 1px solid #555;
+    opacity: 0.4;
+  }
+
+  /* ── Terminal box ── */
+  .terminal {
+    border: 1px solid #fff;
+    background: #2a2a2a;
+  }
+
+  /* ── Sentence rows ── */
+  .sentences-wrap {
+    padding: 20px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .sentence-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px 0;
+    border-bottom: 1px solid #222;
+  }
+  .sentence-row:last-child {
+    border-bottom: none;
+  }
+
+  .row-icon {
+    flex-shrink: 0;
+    width: 22px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #444;
+  }
+
+  .sentence-row.active .row-icon {
+    color: #fff;
+  }
+
+  .sentence-row.done .row-icon {
+    color: #fff;
+  }
+
+  .sentence-text {
+    font-size: 15px;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+    flex: 1;
+    word-break: break-word;
+  }
+
+  .sentence-row.done .sentence-text { opacity: 0.35; }
+  .sentence-row.future .sentence-text { opacity: 0.2; }
+
+  /* ── Chars ── */
+  .char.correct { color: #4fd626; }
+  .char.wrong   { color: #ff4455; background: rgba(255,68,85,0.12); border-radius: 2px; }
+  .char.pending { color: #ffffff; }
+  .char.cursor  {
+    color: #111;
+    background: #fff;
+    border-radius: 1px;
+    animation: blink 0.6s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { background: #fff; color: #111; }
+    50%      { background: transparent; color: #fff; }
+  }
+
+  /* ── Divider ── */
+  .terminal-divider {
+    border: none;
+    border-top: 1px solid #333;
+    margin: 0 20px;
+  }
+
+  /* ── Input row ── */
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 20px;
+    cursor: text;
+  }
+
+  .input-prompt {
+    color: #555;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .input-text {
+    color: #fff;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    flex: 1;
+    word-break: break-all;
+  }
+
+  #hidden-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+  }
+
+  /* ── Time bar (below terminal box) ── */
+  .time-bar-wrap {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .time-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #555;
+    letter-spacing: 1px;
+  }
+
+  .time-bar-outer {
+    width: 100%;
+    height: 3px;
+    background: #222;
+  }
+
+  .time-bar-inner {
+    height: 100%;
+    background: #fff;
+    transition: width 1s linear;
+  }
+
+  /* ── Bottom controls ── */
+  .controls {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-label {
+    font-size: 11px;
+    color: #555;
+    letter-spacing: 1px;
+  }
+
+  .btn {
+    font-family: monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 5px 12px;
+    border: 1px solid #444;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+  }
+
+  .btn:hover { border-color: #fff; color: #fff; }
+  .btn.active { border-color: #fff; color: #fff; }
+
+  .spacer { flex: 1; }
+
+  .btn-reset {
+    border-color: #333;
+    color: #555;
+  }
+  .btn-reset:hover { border-color: #ff4455; color: #ff4455; }
+
+  .btn-immortal {
+    border-color: #333;
+    color: #555;
+  }
+  .btn-immortal:hover { border-color: #fff; color: #fff; }
+  .btn-immortal.on {
+    border-color: #ffb700;
+    color: #ffb700;
+  }
+  .btn-immortal.on:hover { border-color: #ffd44d; color: #ffd44d; }
+
+  /* ── History panel (side card) ── */
+  .history-panel {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 280px;
+    max-height: 70vh;
+    border: 1px solid #444;
+    background: #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+  }
+
+  .history-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #333;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: #888;
+    flex-shrink: 0;
+  }
+
+  .history-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .history-item {
+    border: 1px solid #333;
+    padding: 12px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    background: #232323;
+    border-radius: 2px;
+  }
+
+  .history-item.win {
+    border-color: #4fd626;
+  }
+
+  .history-item.fail {
+    border-color: #ff4455;
+  }
+
+  .history-item-heading {
+    font-weight: bold;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  .history-item.win .history-item-heading {
+    color: #4fd626;
+  }
+
+  .history-item.fail .history-item-heading {
+    color: #ff4455;
+  }
+
+  .history-item-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    color: #888;
+  }
+
+  .history-item-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .history-item-label {
+    font-size: 10px;
+    color: #555;
+  }
+
+  .history-item-value {
+    color: #fff;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<input type="text" id="hidden-input"
+  autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+
+<div class="wrapper">
+
+  <!-- Header above terminal -->
+  <div class="terminal-header">
+    <div class="terminal-title">HACK INTO TERMINAL</div>
+    <div class="lives" id="lives-display">
+      <div class="life-dot" id="life-2"></div>
+      <div class="life-dot" id="life-1"></div>
+      <div class="life-dot" id="life-0"></div>
+    </div>
+  </div>
+
+  <!-- Terminal box -->
+  <div class="terminal" onclick="focusInput()">
+    <div class="sentences-wrap" id="sentences-wrap"></div>
+    <hr class="terminal-divider" />
+    <div class="input-row" id="input-row">
+      <span class="input-prompt">root@terminal:~#</span>
+      <span class="input-text" id="input-text-display">_</span>
+    </div>
+  </div>
+
+  <!-- Time bar -->
+  <div class="time-bar-wrap">
+    <div class="time-bar-label">
+      <span>TIME LEFT</span>
+      <span id="time-label-right">—</span>
+    </div>
+    <div class="time-bar-outer">
+      <div class="time-bar-inner" id="time-bar"></div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <span class="ctrl-label">LIMIT:</span>
+    <button class="btn active" onclick="setTimeLimit(30,this)">30S</button>
+    <button class="btn" onclick="setTimeLimit(60,this)">60S</button>
+    <button class="btn" onclick="setTimeLimit(90,this)">90S</button>
+    <div class="spacer"></div>
+    <button class="btn btn-immortal" id="btn-immortal" onclick="toggleImmortal()">IMMORTAL: OFF</button>
+    <button class="btn btn-reset" onclick="resetTest()">RESET</button>
+  </div>
+
+</div>
+
+<!-- History panel -->
+<div class="history-panel" id="history-panel">
+  <div class="history-header">PAST TRIES</div>
+  <div class="history-items" id="history-items"></div>
+</div>
+
+<script>
+const SENTENCE_POOL = [
+  "TAIL -F /VAR/LOG/SYSLOG | GREP --COLOR=AUTO \"CRITICAL\"",
+  "TCPDUMP -I ETH0 -W 100 -C 10 -W /TMP/CAPTURE.PCAP",
+  "FIND /VAR/LOG -TYPE F -NAME \"*.LOG\" | XARGS GREP -I \"ERROR\"",
+  "PS AUX | GREP NODE | AWK '{PRINT $2}' | XARGS KILL -9",
+  "NMAP -SV -P 1-65535 192.168.1.0/24",
+  "TAR -CZWF /TMP/BACKUP_$ (DATE +%Y%M%D).TAR.GZ /OPT/VAULT/",
+  "CRONTAB -E # */5 * * * * /USR/BIN/BACKUP.SH",
+  "LDAPSEARCH -H LDAP://DC.DOMAIN.COM -B \"DC=CORP,DC=LOCAL\"",
+  "GIT CLONE HTTPS://REPO.INTERNAL.NET/SECURITY/TOOLS.GIT",
+  "MOUNT -T CIFS //SERVER/SHARE /MNT/NETWORK -O CREDENTIALS",
+  "SSH -I ~/.SSH/ID_RSA@192.168.44.12 -P 2222",
+  "NETSTAT -TULNP | GREP :8080",
+  "ECHO \"ADMIN:$(OPENSSL PASSWD -1 P@SSW0RD)\" > /ETC/SHADOW",
+];
+
+/* ── Constants ── */
+const MAX_ERRORS = 3;
+
+/* ── State ── */
+let timeLimit     = 30;
+let timeLeft      = timeLimit;
+let timerInterval = null;
+let started       = false;
+let finished      = false;
+let startTime     = null;
+let immortal      = false;
+
+let sentences      = [];
+let currentSentIdx = 0;
+let currentCharIdx = 0;
+let errorCount     = 0;
+let completedCount = 0;
+
+let resultsHistory = [];
+
+/* ── DOM ── */
+const hiddenInput    = document.getElementById('hidden-input');
+const inputTextDisp  = document.getElementById('input-text-display');
+const sentencesWrap  = document.getElementById('sentences-wrap');
+const timeBar        = document.getElementById('time-bar');
+const timeLabelRight = document.getElementById('time-label-right');
+const historyItems   = document.getElementById('history-items');
+
+/* ── Pick sentences ── */
+function pickSentences() {
+  const pool = [...SENTENCE_POOL];
+  const out  = [];
+  for (let i = 0; i < 3 && pool.length; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    out.push(pool.splice(idx, 1)[0]);
+  }
+  return out;
+}
+
+/* ── Render sentences ── */
+function renderSentences() {
+  sentencesWrap.innerHTML = '';
+  sentences.forEach((sent, si) => {
+    const row = document.createElement('div');
+    row.className = 'sentence-row ' + (si === 0 ? 'active' : 'future');
+    row.id = `row-${si}`;
+
+    const icon = document.createElement('div');
+    icon.className = 'row-icon';
+    icon.id = `icon-${si}`;
+    icon.textContent = '○';
+
+    const textWrap = document.createElement('div');
+    textWrap.className = 'sentence-text';
+
+    [...sent].forEach((ch, ci) => {
+      const span = document.createElement('span');
+      span.className = 'char ' + (si === 0 && ci === 0 ? 'cursor' : 'pending');
+      span.dataset.si = si;
+      span.dataset.ci = ci;
+      span.textContent = ch;
+      textWrap.appendChild(span);
+    });
+
+    row.appendChild(icon);
+    row.appendChild(textWrap);
+    sentencesWrap.appendChild(row);
+  });
+}
+
+/* ── Char helpers ── */
+function getChar(si, ci) {
+  return document.querySelector(`.char[data-si="${si}"][data-ci="${ci}"]`);
+}
+function setChar(si, ci, state) {
+  const el = getChar(si, ci);
+  if (el) el.className = 'char ' + state;
+}
+
+/* ── Input ── */
+hiddenInput.addEventListener('keydown', onKeydown);
+
+document.addEventListener('keydown', e => {
+  if (finished) { if (e.key === 'Enter') resetTest(); return; }
+  hiddenInput.focus();
+});
+
+function focusInput() { hiddenInput.focus(); }
+
+function onKeydown(e) {
+  if (finished) return;
+
+  if (['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
+       'Shift','Control','Alt','Meta','CapsLock','Escape'].includes(e.key)) return;
+
+  e.preventDefault();
+
+  const sent = sentences[currentSentIdx];
+  if (!sent) return;
+
+  if (!started && e.key !== 'Backspace') {
+    started   = true;
+    startTime = Date.now();
+    startTimer();
+  }
+
+  if (e.key === 'Backspace') {
+    if (currentCharIdx > 0) {
+      setChar(currentSentIdx, currentCharIdx, 'pending');
+      currentCharIdx--;
+      setChar(currentSentIdx, currentCharIdx, 'cursor');
+      updateInputPreview();
+    }
+    return;
+  }
+
+  const typed = e.key.length === 1 ? e.key : null;
+  if (!typed) return;
+
+  const expected = sent[currentCharIdx];
+
+  if (typed === expected) {
+    setChar(currentSentIdx, currentCharIdx, 'correct');
+    currentCharIdx++;
+    if (currentCharIdx >= sent.length) {
+      completeSentence();
+    } else {
+      setChar(currentSentIdx, currentCharIdx, 'cursor');
+    }
+  } else {
+    setChar(currentSentIdx, currentCharIdx, 'wrong');
+    errorCount++;
+    updateLives();
+    if (!immortal && errorCount >= MAX_ERRORS) { endTest(false); return; }
+    currentCharIdx++;
+    if (currentCharIdx >= sent.length) {
+      completeSentence();
+    } else {
+      setChar(currentSentIdx, currentCharIdx, 'cursor');
+    }
+  }
+
+  updateInputPreview();
+  updateWpm();
+}
+
+/* ── Complete sentence ── */
+function completeSentence() {
+  const row  = document.getElementById(`row-${currentSentIdx}`);
+  const icon = document.getElementById(`icon-${currentSentIdx}`);
+  if (row)  row.className  = 'sentence-row done';
+  if (icon) icon.textContent = '✔';
+
+  completedCount++;
+  currentSentIdx++;
+  currentCharIdx = 0;
+
+  if (currentSentIdx >= sentences.length) { endTest(true); return; }
+
+  const nextRow = document.getElementById(`row-${currentSentIdx}`);
+  if (nextRow) nextRow.className = 'sentence-row active';
+
+  const nextIcon = document.getElementById(`icon-${currentSentIdx}`);
+  if (nextIcon) nextIcon.textContent = '○';
+
+  setChar(currentSentIdx, 0, 'cursor');
+  updateInputPreview();
+}
+
+/* ── Input preview ── */
+function updateInputPreview() {
+  const sent  = sentences[currentSentIdx] || '';
+  const typed = sent.slice(0, currentCharIdx);
+  inputTextDisp.textContent = typed + '_';
+}
+
+/* ── Lives ── */
+function updateLives() {
+  const remaining = MAX_ERRORS - errorCount;
+  for (let i = 0; i < MAX_ERRORS; i++) {
+    const dot = document.getElementById(`life-${i}`);
+    if (!dot) continue;
+    // dots are ordered 2,1,0 in DOM — light them out from right to left
+    dot.className = 'life-dot' + (i < errorCount ? ' used' : '');
+  }
+}
+
+/* ── Timer ── */
+function startTimer() {
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    timeLeft = Math.max(0, timeLimit - elapsed);
+    updateTimerUI();
+    updateWpm();
+    if (timeLeft <= 0) { clearInterval(timerInterval); endTest(false); }
+  }, 1000);
+  // Ensure UI updates immediately
+  updateTimerUI();
+}
+
+function updateTimerUI() {
+  const pct = (timeLeft / timeLimit) * 100;
+  timeBar.style.width = pct + '%';
+  timeLabelRight.textContent = timeLeft + 's';
+}
+
+/* ── WPM ── */
+function updateWpm() {
+  if (!started) return;
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const elapsedMin = elapsed / 60;
+  let totalChars = sentences.reduce((a, s) => a + s.length, 0);
+  const wpm = elapsedMin > 0 ? Math.round(totalChars / 5 / elapsedMin) : 0;
+  wpmLabel.textContent = wpm + ' WPM';
+}
+
+/* ── End test ── */
+function endTest(win) {
+  finished = true;
+  clearInterval(timerInterval);
+  hiddenInput.blur();
+
+  const elapsed    = started ? Math.round((Date.now() - startTime) / 1000) : 0;
+  const elapsedMin = elapsed / 60;
+  let totalChars   = sentences.reduce((a, s) => a + s.length, 0);
+  const wpm        = elapsedMin > 0 ? Math.round(totalChars / 5 / elapsedMin) : 0;
+
+  // Create result object
+  const result = {
+    win: win,
+    wpm: wpm,
+    elapsed: elapsed,
+    errors: errorCount,
+    completed: completedCount,
+    message: win
+      ? (wpm >= 80 ? 'ELITE OPERATOR'
+      : wpm >= 55 ? 'MISSION SUCCESSFUL'
+      : wpm >= 35 ? 'TARGET COMPROMISED'
+      :             'SLOW BUT EFFECTIVE')
+      : (errorCount >= MAX_ERRORS ? 'TOO MANY ERRORS' : 'TIME LIMIT')
+  };
+
+  resultsHistory.unshift(result);
+  if (resultsHistory.length > 3) resultsHistory.pop();
+  renderHistory();
+
+  // Auto-reset immediately
+  setTimeout(() => resetTest(), 100);
+}
+
+/* ── Render history ── */
+function renderHistory() {
+  historyItems.innerHTML = '';
+  resultsHistory.forEach((result, idx) => {
+    const item = document.createElement('div');
+    item.className = 'history-item ' + (result.win ? 'win' : 'fail');
+
+    const heading = document.createElement('div');
+    heading.className = 'history-item-heading';
+    heading.textContent = result.win ? 'ACCESS GRANTED' : 'FAILED';
+
+    const rows = [
+      { label: 'WPM', value: result.wpm },
+      { label: 'TIME', value: result.elapsed + 's' },
+      { label: 'ERRORS', value: result.errors },
+      { label: 'DONE', value: result.completed + '/3' },
+      { label: 'MSG', value: result.message }
+    ];
+
+    item.appendChild(heading);
+    rows.forEach(row => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'history-item-row';
+      const label = document.createElement('span');
+      label.className = 'history-item-label';
+      label.textContent = row.label;
+      const value = document.createElement('span');
+      value.className = 'history-item-value';
+      value.textContent = row.value;
+      rowEl.appendChild(label);
+      rowEl.appendChild(value);
+      item.appendChild(rowEl);
+    });
+
+    historyItems.appendChild(item);
+  });
+}
+
+/* ── Reset ── */
+function resetTest() {
+  clearInterval(timerInterval);
+
+  started = false; finished = false; startTime = null;
+  currentSentIdx = 0; currentCharIdx = 0;
+  errorCount = 0; completedCount = 0;
+  timeLeft = timeLimit;
+
+  // Reset lives dots
+  for (let i = 0; i < MAX_ERRORS; i++) {
+    const d = document.getElementById(`life-${i}`);
+    if (d) { d.className = 'life-dot'; d.style.opacity = immortal ? '0.2' : ''; }
+  }
+
+  hiddenInput.value = '';
+  inputTextDisp.textContent = '_';
+
+  timeBar.style.transition = 'none';
+  timeBar.style.width = '100%';
+  // re-enable transition after paint
+  requestAnimationFrame(() => {
+    timeBar.style.transition = 'width 1s linear';
+  });
+  timeLabelRight.textContent = timeLimit + 's';
+
+  sentences = pickSentences();
+  renderSentences();
+  setTimeout(() => hiddenInput.focus(), 100);
+}
+
+function setTimeLimit(t, btn) {
+  timeLimit = t;
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  resetTest();
+}
+
+/* ── Immortal toggle ── */
+function toggleImmortal() {
+  immortal = !immortal;
+  const btn = document.getElementById('btn-immortal');
+  btn.textContent = immortal ? 'IMMORTAL: ON' : 'IMMORTAL: OFF';
+  btn.classList.toggle('on', immortal);
+  // Grey out life dots when immortal
+  for (let i = 0; i < MAX_ERRORS; i++) {
+    const d = document.getElementById(`life-${i}`);
+    if (d) d.style.opacity = immortal ? '0.2' : '';
+  }
+}
+
+/* ── Init ── */
+sentences = pickSentences();
+renderSentences();
+timeBar.style.width = '100%';
+timeLabelRight.textContent = timeLimit + 's';
+setTimeout(() => hiddenInput.focus(), 100);
+</script>
+</body>
+</html>
