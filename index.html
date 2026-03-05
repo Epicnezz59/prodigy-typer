@@ -150,7 +150,7 @@
   }
 
   .input-prompt {
-    color: #555;
+    color: #ccc;
     font-size: 14px;
     flex-shrink: 0;
   }
@@ -161,6 +161,7 @@
     letter-spacing: 0.5px;
     flex: 1;
     word-break: break-all;
+    display: none;
   }
 
   #hidden-input {
@@ -183,13 +184,13 @@
     display: flex;
     justify-content: space-between;
     font-size: 11px;
-    color: #555;
+    color: #ccc;
     letter-spacing: 1px;
   }
 
   .time-bar-outer {
     width: 100%;
-    height: 3px;
+    height: 10px;
     background: #222;
   }
 
@@ -221,7 +222,7 @@
     padding: 5px 12px;
     border: 1px solid #444;
     background: transparent;
-    color: #888;
+    color: #bbb;
     cursor: pointer;
   }
 
@@ -232,20 +233,30 @@
 
   .btn-reset {
     border-color: #333;
-    color: #555;
+    color: #aaa;
   }
   .btn-reset:hover { border-color: #ff4455; color: #ff4455; }
 
-  .btn-immortal {
+  .btn-lives {
     border-color: #333;
-    color: #555;
+    color: #aaa;
   }
-  .btn-immortal:hover { border-color: #fff; color: #fff; }
-  .btn-immortal.on {
+  .btn-lives:hover { border-color: #fff; color: #fff; }
+  .btn-lives.off {
     border-color: #ffb700;
     color: #ffb700;
   }
-  .btn-immortal.on:hover { border-color: #ffd44d; color: #ffd44d; }
+  .btn-lives.off:hover { border-color: #ffd44d; color: #ffd44d; }
+
+  .btn-start {
+    border-color: #4fd626;
+    color: #4fd626;
+    font-weight: bold;
+    padding: 8px 20px;
+    font-size: 12px;
+  }
+  .btn-start:hover { border-color: #7fff47; color: #7fff47; }
+  .btn-start.hidden { display: none; }
 
   /* ── History panel (side card) ── */
   .history-panel {
@@ -331,12 +342,78 @@
     color: #fff;
     font-weight: bold;
   }
+
+  /* ── Start modal ── */
+  .start-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(2px);
+  }
+
+  .start-modal.hidden {
+    display: none;
+  }
+
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    text-align: center;
+  }
+
+  .modal-title {
+    font-size: 48px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    color: #fff;
+  }
+
+  .modal-btn {
+    font-family: monospace;
+    font-size: 20px;
+    letter-spacing: 2px;
+    padding: 20px 60px;
+    border: 2px solid #4fd626;
+    background: transparent;
+    color: #4fd626;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+  }
+
+  .modal-btn:hover {
+    background: rgba(79, 214, 38, 0.1);
+    border-color: #7fff47;
+    color: #7fff47;
+    transform: scale(1.05);
+  }
+
+  .modal-btn:active {
+    transform: scale(0.98);
+  }
 </style>
 </head>
 <body>
 
 <input type="text" id="hidden-input"
   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+
+<!-- Start modal -->
+<div class="start-modal" id="start-modal">
+  <div class="modal-content">
+    <div class="modal-title">HACK INTO TERMINAL</div>
+    <button class="modal-btn" id="modal-btn-start" onclick="startSequence()">▶ START SEQUENCE</button>
+  </div>
+</div>
 
 <div class="wrapper">
 
@@ -355,7 +432,7 @@
     <div class="sentences-wrap" id="sentences-wrap"></div>
     <hr class="terminal-divider" />
     <div class="input-row" id="input-row">
-      <span class="input-prompt">root@terminal:~#</span>
+      <span class="input-prompt">TYPE COMMAND...</span>
       <span class="input-text" id="input-text-display">_</span>
     </div>
   </div>
@@ -378,7 +455,7 @@
     <button class="btn" onclick="setTimeLimit(60,this)">60S</button>
     <button class="btn" onclick="setTimeLimit(90,this)">90S</button>
     <div class="spacer"></div>
-    <button class="btn btn-immortal" id="btn-immortal" onclick="toggleImmortal()">IMMORTAL: OFF</button>
+    <button class="btn btn-lives" id="btn-lives" onclick="toggleLives()">LIVES: ON</button>
     <button class="btn btn-reset" onclick="resetTest()">RESET</button>
   </div>
 
@@ -405,6 +482,17 @@ const SENTENCE_POOL = [
   "SSH -I ~/.SSH/ID_RSA@192.168.44.12 -P 2222",
   "NETSTAT -TULNP | GREP :8080",
   "ECHO \"ADMIN:$(OPENSSL PASSWD -1 P@SSW0RD)\" > /ETC/SHADOW",
+  "TMP/DUMP.ENC -K $PASSPHRASE",
+  "DOCKER EXEC -IT CONTAINER_ID /BIN/BASH -C \"CAT /VAR/LOG\"",
+  "IPTABLES -A INPUT -P TCP --DPORT 443 -J ACCEPT",
+  "FIND /HOME -NAME \"*.SSH\" -EXEC CHMOD 700 {} \;",
+  "OPENSSL REQ -NEW -NEWKEY RSA:4096 -NODES -KEYOUT KEY.PEM",
+  "SCREEN -DMLS SESSION_NAME /OPT/SERVER/STAT.SH",
+  "SYSTEMCTL RESTART NGINX && JOURNALCTL -U NGINX -F",
+  "WGET --NO-CHECK-CERTIFICATE HTTPS://DL.SERVER.NET/PACKAGE.TAR",
+  "RSYNC -AVZH /DATA/BACKUP/ USER@REMOTE:/VAULT/",
+  "CHMOD -R 755 /SRV/DATA && CHOWN -R ROOT:ADMIN /SRV/DATA",
+  "CURL -X POST HTTPS://API.SECURE.NET/AUTH -H \"TOKEN: BEARER\"",
 ];
 
 /* ── Constants ── */
@@ -417,7 +505,7 @@ let timerInterval = null;
 let started       = false;
 let finished      = false;
 let startTime     = null;
-let immortal      = false;
+let lives         = true;
 
 let sentences      = [];
 let currentSentIdx = 0;
@@ -426,6 +514,7 @@ let errorCount     = 0;
 let completedCount = 0;
 
 let resultsHistory = [];
+let testReady      = false;
 
 /* ── DOM ── */
 const hiddenInput    = document.getElementById('hidden-input');
@@ -490,6 +579,13 @@ function setChar(si, ci, state) {
 hiddenInput.addEventListener('keydown', onKeydown);
 
 document.addEventListener('keydown', e => {
+  if (!testReady && !finished) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      startSequence();
+    }
+    return;
+  }
   if (finished) { if (e.key === 'Enter') resetTest(); return; }
   hiddenInput.focus();
 });
@@ -498,6 +594,7 @@ function focusInput() { hiddenInput.focus(); }
 
 function onKeydown(e) {
   if (finished) return;
+  if (!testReady) return;
 
   if (['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
        'Shift','Control','Alt','Meta','CapsLock','Escape'].includes(e.key)) return;
@@ -540,7 +637,7 @@ function onKeydown(e) {
     setChar(currentSentIdx, currentCharIdx, 'wrong');
     errorCount++;
     updateLives();
-    if (!immortal && errorCount >= MAX_ERRORS) { endTest(false); return; }
+    if (lives && errorCount >= MAX_ERRORS) { endTest(false); return; }
     currentCharIdx++;
     if (currentCharIdx >= sent.length) {
       completeSentence();
@@ -601,8 +698,14 @@ function startTimer() {
     timeLeft = Math.max(0, timeLimit - elapsed);
     updateTimerUI();
     updateWpm();
-    if (timeLeft <= 0) { clearInterval(timerInterval); endTest(false); }
-  }, 1000);
+  }, 100);  // Update every 100ms for smooth visual
+  
+  // Set precise timeout to end test at exact time limit
+  setTimeout(() => {
+    clearInterval(timerInterval);
+    endTest(false);
+  }, timeLimit * 1000);
+  
   // Ensure UI updates immediately
   updateTimerUI();
 }
@@ -620,7 +723,6 @@ function updateWpm() {
   const elapsedMin = elapsed / 60;
   let totalChars = sentences.reduce((a, s) => a + s.length, 0);
   const wpm = elapsedMin > 0 ? Math.round(totalChars / 5 / elapsedMin) : 0;
-  wpmLabel.textContent = wpm + ' WPM';
 }
 
 /* ── End test ── */
@@ -699,7 +801,7 @@ function renderHistory() {
 function resetTest() {
   clearInterval(timerInterval);
 
-  started = false; finished = false; startTime = null;
+  started = false; finished = false; startTime = null; testReady = false;
   currentSentIdx = 0; currentCharIdx = 0;
   errorCount = 0; completedCount = 0;
   timeLeft = timeLimit;
@@ -707,7 +809,7 @@ function resetTest() {
   // Reset lives dots
   for (let i = 0; i < MAX_ERRORS; i++) {
     const d = document.getElementById(`life-${i}`);
-    if (d) { d.className = 'life-dot'; d.style.opacity = immortal ? '0.2' : ''; }
+    if (d) { d.className = 'life-dot'; d.style.opacity = !lives ? '0.2' : ''; }
   }
 
   hiddenInput.value = '';
@@ -723,7 +825,23 @@ function resetTest() {
 
   sentences = pickSentences();
   renderSentences();
+  
+  // Show start modal
+  const modal = document.getElementById('start-modal');
+  if (modal) modal.classList.remove('hidden');
+  
   setTimeout(() => hiddenInput.focus(), 100);
+}
+
+/* ── Start sequence ── */
+function startSequence() {
+  const modal = document.getElementById('start-modal');
+  if (modal) modal.classList.add('hidden');
+  testReady = true;
+  started = true;
+  startTime = Date.now();
+  startTimer();
+  hiddenInput.focus();
 }
 
 function setTimeLimit(t, btn) {
@@ -733,16 +851,16 @@ function setTimeLimit(t, btn) {
   resetTest();
 }
 
-/* ── Immortal toggle ── */
-function toggleImmortal() {
-  immortal = !immortal;
-  const btn = document.getElementById('btn-immortal');
-  btn.textContent = immortal ? 'IMMORTAL: ON' : 'IMMORTAL: OFF';
-  btn.classList.toggle('on', immortal);
-  // Grey out life dots when immortal
+/* ── Lives toggle ── */
+function toggleLives() {
+  lives = !lives;
+  const btn = document.getElementById('btn-lives');
+  btn.textContent = lives ? 'LIVES: ON' : 'LIVES: OFF';
+  btn.classList.toggle('off', !lives);
+  // Grey out life dots when lives are off
   for (let i = 0; i < MAX_ERRORS; i++) {
     const d = document.getElementById(`life-${i}`);
-    if (d) d.style.opacity = immortal ? '0.2' : '';
+    if (d) d.style.opacity = !lives ? '0.2' : '';
   }
 }
 
