@@ -693,6 +693,9 @@ function updateLives() {
 
 /* ── Timer ── */
 function startTimer() {
+  // Clear any existing timers
+  clearInterval(timerInterval);
+  
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
     timeLeft = Math.max(0, timeLimit - elapsed);
@@ -815,7 +818,7 @@ function resetTest() {
   hiddenInput.value = '';
   inputTextDisp.textContent = '_';
 
-  timeBar.style.transition = 'none';
+  timeBar.style.transition = 'none';  
   timeBar.style.width = '100%';
   // re-enable transition after paint
   requestAnimationFrame(() => {
@@ -835,6 +838,7 @@ function resetTest() {
 
 /* ── Start sequence ── */
 function startSequence() {
+  if (testReady) return; // Prevent multiple calls
   const modal = document.getElementById('start-modal');
   if (modal) modal.classList.add('hidden');
   testReady = true;
