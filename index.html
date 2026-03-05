@@ -270,7 +270,7 @@
     background: #2a2a2a;
     display: flex;
     flex-direction: column;
-    z-index: 50;
+    z-index: 101;
   }
 
   .history-header {
@@ -400,6 +400,15 @@
   .modal-btn:active {
     transform: scale(0.98);
   }
+
+  /* ── Minimum WPM display ── */
+  .minimum-wpm-display-top {
+    text-align: center;
+    font-size: 24px;
+    color: #888;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
 </style>
 </head>
 <body>
@@ -416,6 +425,9 @@
 </div>
 
 <div class="wrapper">
+
+  <!-- Minimum WPM display -->
+  <div class="minimum-wpm-display-top" id="minimum-wpm-display">MIN WPM: —</div>
 
   <!-- Header above terminal -->
   <div class="terminal-header">
@@ -502,6 +514,7 @@ const MAX_ERRORS = 3;
 let timeLimit     = 30;
 let timeLeft      = timeLimit;
 let timerInterval = null;
+let timerTimeout  = null;
 let started       = false;
 let finished      = false;
 let startTime     = null;
@@ -524,7 +537,23 @@ const timeBar        = document.getElementById('time-bar');
 const timeLabelRight = document.getElementById('time-label-right');
 const historyItems   = document.getElementById('history-items');
 
-/* ── Pick sentences ── */
+/* ── Calculate minimum WPM ── */
+function calculateMinimumWPM() {
+  if (sentences.length === 0) return 0;
+  const totalChars = sentences.reduce((sum, sent) => sum + sent.length, 0);
+  const totalWords = totalChars / 5; // Standard: 5 chars = 1 word
+  const timeInMinutes = timeLimit / 60;
+  return Math.ceil(totalWords / timeInMinutes);
+}
+
+/* ── Update minimum WPM display ── */
+function updateMinWPMDisplay() {
+  const minWPM = calculateMinimumWPM();
+  const display = document.getElementById('minimum-wpm-display');
+  if (display) {
+    display.textContent = `MIN WPM: ${minWPM}`;
+  }
+}
 function pickSentences() {
   const pool = [...SENTENCE_POOL];
   const out  = [];
@@ -695,6 +724,7 @@ function updateLives() {
 function startTimer() {
   // Clear any existing timers
   clearInterval(timerInterval);
+  clearTimeout(timerTimeout);
   
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -704,7 +734,7 @@ function startTimer() {
   }, 100);  // Update every 100ms for smooth visual
   
   // Set precise timeout to end test at exact time limit
-  setTimeout(() => {
+  timerTimeout = setTimeout(() => {
     clearInterval(timerInterval);
     endTest(false);
   }, timeLimit * 1000);
@@ -732,6 +762,7 @@ function updateWpm() {
 function endTest(win) {
   finished = true;
   clearInterval(timerInterval);
+  clearTimeout(timerTimeout);
   hiddenInput.blur();
 
   const elapsed    = started ? Math.round((Date.now() - startTime) / 1000) : 0;
@@ -743,6 +774,7 @@ function endTest(win) {
   const result = {
     win: win,
     wpm: wpm,
+    minWPM: calculateMinimumWPM(),
     elapsed: elapsed,
     errors: errorCount,
     completed: completedCount,
@@ -775,6 +807,7 @@ function renderHistory() {
 
     const rows = [
       { label: 'WPM', value: result.wpm },
+      { label: 'MIN WPM', value: result.minWPM },
       { label: 'TIME', value: result.elapsed + 's' },
       { label: 'ERRORS', value: result.errors },
       { label: 'DONE', value: result.completed + '/3' },
@@ -803,6 +836,7 @@ function renderHistory() {
 /* ── Reset ── */
 function resetTest() {
   clearInterval(timerInterval);
+  clearTimeout(timerTimeout);
 
   started = false; finished = false; startTime = null; testReady = false;
   currentSentIdx = 0; currentCharIdx = 0;
@@ -828,6 +862,7 @@ function resetTest() {
 
   sentences = pickSentences();
   renderSentences();
+  updateMinWPMDisplay();
   
   // Show start modal
   const modal = document.getElementById('start-modal');
@@ -871,6 +906,7 @@ function toggleLives() {
 /* ── Init ── */
 sentences = pickSentences();
 renderSentences();
+updateMinWPMDisplay();
 timeBar.style.width = '100%';
 timeLabelRight.textContent = timeLimit + 's';
 setTimeout(() => hiddenInput.focus(), 100);
